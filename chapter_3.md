@@ -298,3 +298,49 @@ SELECT * FROM restaurants WHERE latitude > 51.4946 AND latitude < 51.5079
 - Data model of a data warehouse is mostly relational as SQL is good fit for analytic queries.
 
 - The SQL query interface is same but the internals of the systems are different.
+
+### Stars and Snowflakes: Schemas for Analytics
+
+- Many data warehouses use a formulaic style data model known as **star schema** (also known as dimensional modeling).
+
+**Fact and dimension tables**:
+
+- At the centre we have *fact table*. Each row of fact table represents an event that occured at a particular time.
+
+- Some of the columns in these fact table are attributes but other columns are foreign key references to other table called *dimension tables*. 
+
+- Dimension tables represent the who, what, where, when, how and why of the event.
+
+- Star schema: Fact table in the middle and dimension tables around it.
+
+- Snowflake schema: The dimensions are further broken down into subdimensions.
+
+- Snowflake schemas are more normalized than star schemas, but star schemas are simple.
+
+## Column-Oriented Storage
+
+- Fact tables have trillions of rows and may be 100 columns wide. But for a query we need only a small subset of the rows.
+
+- In general OLTP databases, storage is laid out in a row-oriented fashion. Even if we have indexes on the queried columns, a row-oriented engine needs to load all rows each having 100s of columns from disk to memory and process them which takes a long time.
+
+- **Column-oriented storage** store all the values from each column together. A query only needs to read and parse those columns that are used in the query.
+
+### Column compression
+
+- Depending on the data in the column, different compression techniques can be used. One technique which is majorly used is *bitmap encoding*.
+
+**Bitmap encoding**:
+
+- Number of distinct values in a column is small compared to the number of rows (only 10000 distinct products, 200 countries). So n distinct values can be turned into n seperate bitmaps.
+
+- Each bitmap has one bit for each row. The bit is 1 if the row has that value else 0. If n is very large then there will lot of zeroes in most of the bitmaps, then the bitmaps can be run-length encoded.
+
+- Bitmaps are very useful for OR and AND queries which are very common in data analytics.
+
+**Memory Bandwidth and vectorized processing**:
+
+Developers of analytical database worry about effectively using bandwidth from disk to main memory, main memory to CPU cache, avoiding branch misprediction and bubbles in CPU instruction processing pipeline and making use of single-instruction-multi-data (SIMD) instructions.
+
+- Column-oriented storage layouts are also good for making efficient use of CPU cycles. Column compression allows more rows from a column to fit in the same amount of L1 cache.
+
+- **Vectorized processing**: Operators such as bitwise AND and OR can be designed to operate on such chunks of compressed data directly.
