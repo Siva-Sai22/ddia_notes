@@ -344,3 +344,42 @@ Developers of analytical database worry about effectively using bandwidth from d
 - Column-oriented storage layouts are also good for making efficient use of CPU cycles. Column compression allows more rows from a column to fit in the same amount of L1 cache.
 
 - **Vectorized processing**: Operators such as bitwise AND and OR can be designed to operate on such chunks of compressed data directly.
+
+### Sort Order in Column Storage
+
+It's easiest to store rows in the order i which they were inserted. However, we can choose to impose an order.
+
+- The database administrator can choose the columns by which the table should be sorted. For example, date_key can be the first sort key then any other key can be second sort_key which sorts if the values of the first column are same.
+
+- This also helps in compression because we have similar keys in sorted order.
+
+**Several different sort orders**:
+
+Different queries benefit from different sort orders. Data needs to be replicated on multiple machines anyway, so why not store the data sorted in several different ways.
+
+- This is similar to having multiple secondary indexes in a row-oriented store. Only difference is they store pointers to matching rows but i column store, there aren't any pointers only column containing values.
+
+### Writing to Column-Oriented Storage:
+
+They are also downsides to the column-oriented storage format.
+
+- An update-in-place approach is not possible with compressed columns. If we want to insert a row in the middle of sorted table, we would have to rewrite all the column files.
+
+- A good solution to this is LSM trees. All writes go to in-memory store, added to a sorted structure and when enough writes are accumulated, merged with column files on disk.
+
+### Aggregation: Data Cubes and Materialized Views
+
+If same aggregates(COUNT, SUM, AVG) are used by many different queries it can be wasteful to crunch through raw data every time. We ca have cache for some of the counts which the queries frequently use.
+
+- One way of creating the cache is **Materialized Views**. In a relation data model it is defined like a standard (virtual) view: a table whose contents are results of some query.
+
+- But materialized view is an actual copy of the query results written to the disk, whereas virtual view is just a shortcut to the query.
+
+- When the underlying data changes, a materialized view needs to be updated, because it is just a denormalized copy of the data. Due to this writes become more expensive which is why these views are not used in OLTP databases.
+
+**Data cube or OLAP cube**: A common case of a materialized view which is a grid of aggregates grouped by different dimensions. If facts table has 2 dimensional tables then we can make a two-dimensional cube with dates and products on x, y axis and each cell contains the aggregate.
+
+- We can easily apply aggregate along each column/row to get a summary that has been reduced by one dimension (the sales by product regard‐
+less of date, or the sales by date regardless of product).
+
+- The advantages of this materialized data is that certain queries become very fast but it doesn't have the same flexibility as querying raw data.
